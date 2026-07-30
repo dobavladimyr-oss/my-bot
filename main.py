@@ -4,13 +4,12 @@ from aiohttp import web
 from pyrogram import Client, filters
 import aiohttp
 
-# 1. Получаем переменные и очищаем от случайных пробелов/кавычек
+# 1. Данные из окружения
 API_ID = int(os.environ.get("API_ID", "0").strip())
 API_HASH = os.environ.get("API_HASH", "").strip().strip("'\"")
 SESSION_STRING = os.environ.get("SESSION_STRING", "").strip().strip("'\"")
 WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "").strip().strip("'\"")
 
-# 2. Инициализация юзербота в оперативной памяти
 app = Client(
     "my_userbot",
     api_id=API_ID,
@@ -19,29 +18,32 @@ app = Client(
     in_memory=True
 )
 
-# 3. Фильтр: ловим ВСЕ сообщения из каналов и групп
+# 2. Фильтр: безопасно ловим любые посты
 @app.on_message(filters.channel | filters.group)
 async def handle_channel_post(client, message):
-    text = message.text or message.caption
-    
-    if not text:
-        return
-
-    payload = {
-        "text": text,
-        "chat_id": message.chat.id,
-        "message_id": message.id
-    }
-
     try:
+        # Извлекаем текст или подпись к медиафайлу
+        text = message.text or message.caption or ""
+        
+        if not text.strip():
+            return
+
+        payload = {
+            "text": text,
+            "chat_id": message.chat.id,
+            "message_id": message.id
+        }
+
         async with aiohttp.ClientSession() as session:
-            async with session.post(WEBHOOK_URL, json=payload) as resp:
-                print(f"[LOG] Передано на вебхук! Статус: {resp.status}")
+            async with session.post(WEBHOOK_URL, json=payload, timeout=10) as resp:
+                print(f"[LOG] Успешно отправлено на Make! Статус: {resp.status}")
+
     except Exception as e:
-        print(f"[ERROR] Ошибка отправки на Webhook: {e}")
+        # Логируем ошибку, но НЕ даем приложению упасть!
+        print(f"[ERROR] Ошибка при обработке сообщения: {e}")
 
 
-# 4. Веб-сервер для поддержки активности Render
+# 3. Веб-сервер для поддержки Render
 async def handle_ping(request):
     return web.Response(text="Your service is live 🚀")
 
@@ -58,7 +60,7 @@ async def start_web_server():
 async def main():
     await start_web_server()
     await app.start()
-    print("[LOG] Юзербот успешно запущен и отслеживает каналы!")
+    print("[LOG] Юзербот запущен и отслеживает каналы!")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
