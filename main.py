@@ -5,17 +5,18 @@ from pyrogram import Client, filters
 import aiohttp
 
 # 1. Данные из переменных окружения
-API_ID = int(os.environ.get("API_ID", 0))
-API_HASH = os.environ.get("API_HASH", "")
-SESSION_STRING = os.environ.get("SESSION_STRING", "")
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
+API_ID = int(os.environ.get("API_ID").strip())
+API_HASH = os.environ.get("API_HASH", "").strip()
+SESSION_STRING = os.environ.get("SESSION_STRING", "").strip()
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "").strip()
 
 # 2. Инициализация юзербота
 app = Client(
     "my_userbot",
     api_id=API_ID,
     api_hash=API_HASH,
-    session_string=SESSION_STRING
+    session_string=SESSION_STRING,
+    in_memory=True
 )
 
 # 3. Фильтр: ловим ВСЕ сообщения из каналов и групп
@@ -61,5 +62,4 @@ async def main():
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
-    # Правильный запуск asyncio для новых версий Python
     asyncio.run(main())
