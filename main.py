@@ -1,12 +1,15 @@
 import asyncio
 from telethon import TelegramClient, events
+from telethon.sessions import StringSession
 import aiohttp
 
 API_ID = 32065095
 API_HASH = 'c23ce03ff001e29dc44a36976699b862'
 WEBHOOK_URL = 'https://hook.eu1.make.com/r9b84om9ih1vlavqriglefifrayha47f'
 
-client = TelegramClient('dubai_parser_session', API_ID, API_HASH)
+SESSION_STRING = '1ApWapzMBu2AgVzbsy43IaEpdwXq8vPFrI8kHyCyVUHyOX08plS_n6PmqhomM-bN18wNDy1A6Req19-uTHxw-iuEmUUUeBGGeDVb99f3T8vi6Zo38jJ2pSF7PXV3HyLQihfGzW87a7mCe8pKBXBjG85dEPaosNv1UaUBsjYzS41O_MqG5pgAWPFkSYNlFPdUqykFkYUH8ZItAYOiMEqnZZM8ijaUv_mcqu-l1pKVCjA88S9ycd0PYhqDRkhwMAuco79Fb_l7NNGbDvzgdjaywZe6M4tmkXmSfEkoww2f-Dt9F3Ba7wBE9EC36F4EZ0ojdRLpVJB9KXnhn0nq3IdHpU6h01NPX8FY='
+
+client = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
 
 @client.on(events.NewMessage)
 async def handler(event):
@@ -23,8 +26,12 @@ async def handler(event):
                     async with session.post(WEBHOOK_URL, json=payload) as resp:
                         print(f"Пост отправлен в Make! Статус: {resp.status}")
                 except Exception as e:
-                    print(f"Ошибка: {e}")
+                    print(f"Ошибка при отправке: {e}")
 
-print("Юзербот запущен!")
-client.start()
-client.run_until_disconnected()
+async def main():
+    print("Юзербот успешно запущен!")
+    await client.start()
+    await client.run_until_disconnected()
+
+if __name__ == '__main__':
+    asyncio.run(main())
