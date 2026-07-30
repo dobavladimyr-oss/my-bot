@@ -4,7 +4,7 @@ from aiohttp import web
 from pyrogram import Client, filters
 import aiohttp
 
-# 1. Данные из окружения
+# 1. Переменные окружения
 API_ID = int(os.environ.get("API_ID", "0").strip())
 API_HASH = os.environ.get("API_HASH", "").strip().strip("'\"")
 SESSION_STRING = os.environ.get("SESSION_STRING", "").strip().strip("'\"")
@@ -18,11 +18,10 @@ app = Client(
     in_memory=True
 )
 
-# 2. Фильтр: безопасно ловим любые посты
+# 2. Перехват постов из каналов и групп
 @app.on_message(filters.channel | filters.group)
 async def handle_channel_post(client, message):
     try:
-        # Извлекаем текст или подпись к медиафайлу
         text = message.text or message.caption or ""
         
         if not text.strip():
@@ -36,14 +35,13 @@ async def handle_channel_post(client, message):
 
         async with aiohttp.ClientSession() as session:
             async with session.post(WEBHOOK_URL, json=payload, timeout=10) as resp:
-                print(f"[LOG] Успешно отправлено на Make! Статус: {resp.status}")
+                print(f"[LOG] Сообщение перехвачено и отправлено в Make! Статус: {resp.status}")
 
     except Exception as e:
-        # Логируем ошибку, но НЕ даем приложению упасть!
-        print(f"[ERROR] Ошибка при обработке сообщения: {e}")
+        print(f"[ERROR] Ошибка при обработке: {e}")
 
 
-# 3. Веб-сервер для поддержки Render
+# 3. Веб-сервер для Render
 async def handle_ping(request):
     return web.Response(text="Your service is live 🚀")
 
@@ -60,7 +58,13 @@ async def start_web_server():
 async def main():
     await start_web_server()
     await app.start()
-    print("[LOG] Юзербот запущен и отслеживает каналы!")
+    
+    # "Прогреваем" диалоги, чтобы Pyrogram загрузил ID всех каналов в память
+    print("[LOG] Загрузка списка диалогов...")
+    async for dialog in app.get_dialogs():
+        pass
+        
+    print("[LOG] Юзербот полностью запущен и готов к работе!")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
