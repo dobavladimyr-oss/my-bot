@@ -21,7 +21,6 @@ app = Client(
 # 3. Фильтр: ловим ВСЕ сообщения из каналов и групп
 @app.on_message(filters.channel | filters.group)
 async def handle_channel_post(client, message):
-    # Берём текст сообщения или подпись к медиафайлу (если это фото/видео)
     text = message.text or message.caption
     
     if not text:
@@ -41,7 +40,7 @@ async def handle_channel_post(client, message):
         print(f"[ERROR] Ошибка отправки на Webhook: {e}")
 
 
-# 4. Простейший веб-сервер, чтобы Render не усыплял бесплатный инстанс
+# 4. Веб-сервер для Render
 async def handle_ping(request):
     return web.Response(text="Your service is live 🚀")
 
@@ -58,9 +57,9 @@ async def start_web_server():
 async def main():
     await start_web_server()
     await app.start()
-    print("[LOG] Юзербот запущен и отслеживает каналы!")
+    print("[LOG] Юзербот успешно запущен и отслеживает каналы!")
     await asyncio.Event().wait()
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(main())
+    # Правильный запуск asyncio для новых версий Python
+    asyncio.run(main())
