@@ -1,71 +1,36 @@
 import os
-import asyncio
-from aiohttp import web
+import requests
 from pyrogram import Client, filters
-import aiohttp
 
-# 1. Переменные окружения
-API_ID = int(os.environ.get("API_ID", "0").strip())
-API_HASH = os.environ.get("API_HASH", "").strip().strip("'\"")
-SESSION_STRING = os.environ.get("SESSION_STRING", "").strip().strip("'\"")
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "").strip().strip("'\"")
+API_ID = int(os.environ.get("API_ID"))
+API_HASH = os.environ.get("API_HASH")
+SESSION_STRING = os.environ.get("SESSION_STRING")
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL")
 
-app = Client(
-    "my_userbot",
-    api_id=API_ID,
-    api_hash=API_HASH,
-    session_string=SESSION_STRING,
-    in_memory=True
-)
+app = Client("userbot", api_id=API_ID, api_hash=API_HASH, session_string=SESSION_STRING)
 
-# 2. Перехват постов из каналов и групп
+# Отслеживаем и каналы (channel), и группы/супергруппы (group)
 @app.on_message(filters.channel | filters.group)
-async def handle_channel_post(client, message):
-    try:
-        text = message.text or message.caption or ""
-        
-        if not text.strip():
-            return
-
-        payload = {
-            "text": text,
-            "chat_id": message.chat.id,
-            "message_id": message.id
-        }
-
-        async with aiohttp.ClientSession() as session:
-            async with session.post(WEBHOOK_URL, json=payload, timeout=10) as resp:
-                print(f"[LOG] Сообщение перехвачено и отправлено в Make! Статус: {resp.status}")
-
-    except Exception as e:
-        print(f"[ERROR] Ошибка при обработке: {e}")
-
-
-# 3. Веб-сервер для Render
-async def handle_ping(request):
-    return web.Response(text="Your service is live 🚀")
-
-async def start_web_server():
-    server = web.Application()
-    server.router.add_get("/", handle_ping)
-    runner = web.AppRunner(server)
-    await runner.setup()
-    port = int(os.environ.get("PORT", 10000))
-    site = web.TCPSite(runner, "0.0.0.0", port)
-    await site.start()
-    print(f"[LOG] Web server running on port {port}")
-
-async def main():
-    await start_web_server()
-    await app.start()
+async def handle_new_message(client, message):
+    # Забираем текст из обычного сообщения ИЛИ подпись из медиа (картинки)
+    text_content = message.text or message.caption
     
-    # "Прогреваем" диалоги, чтобы Pyrogram загрузил ID всех каналов в память
-    print("[LOG] Загрузка списка диалогов...")
-    async for dialog in app.get_dialogs():
-        pass
-        
-    print("[LOG] Юзербот полностью запущен и готов к работе!")
-    await asyncio.Event().wait()
+    # Если в сообщении нет вообще никакого текста, пропускаем
+    if not text_content:
+        return
+
+    payload = {
+        "text": text_content,
+        "chat_id": message.chat.id,
+        "message_id": message.id
+    }
+
+    try:
+        response = requests.post(WEBHOOK_URL, json=payload, timeout=10)
+        print(f"[LOG] Перехвачено! Чат: {message.chat.id}, Статус Make: {response.status_code}")
+    except Exception as e:
+        print(f"[ERROR] Ошибка отправки в Make: {e}")
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    print("Юзербот запускается...")
+    app.run()
