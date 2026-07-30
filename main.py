@@ -4,13 +4,13 @@ from aiohttp import web
 from pyrogram import Client, filters
 import aiohttp
 
-# 1. Данные из переменных окружения
-API_ID = int(os.environ.get("API_ID").strip())
-API_HASH = os.environ.get("API_HASH", "").strip()
-SESSION_STRING = os.environ.get("SESSION_STRING", "").strip()
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "").strip()
+# 1. Получаем переменные и очищаем от случайных пробелов/кавычек
+API_ID = int(os.environ.get("API_ID", "0").strip())
+API_HASH = os.environ.get("API_HASH", "").strip().strip("'\"")
+SESSION_STRING = os.environ.get("SESSION_STRING", "").strip().strip("'\"")
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "").strip().strip("'\"")
 
-# 2. Инициализация юзербота
+# 2. Инициализация юзербота в оперативной памяти
 app = Client(
     "my_userbot",
     api_id=API_ID,
@@ -41,7 +41,7 @@ async def handle_channel_post(client, message):
         print(f"[ERROR] Ошибка отправки на Webhook: {e}")
 
 
-# 4. Веб-сервер для Render
+# 4. Веб-сервер для поддержки активности Render
 async def handle_ping(request):
     return web.Response(text="Your service is live 🚀")
 
