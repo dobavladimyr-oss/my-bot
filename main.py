@@ -1,52 +1,66 @@
-import asyncio
 import os
-from telethon import TelegramClient, events
-from telethon.sessions import StringSession
-import aiohttp
+import asyncio
 from aiohttp import web
+from pyrogram import Client, filters
+import aiohttp
 
-API_ID = 32065095
-API_HASH = 'c23ce03ff001e29dc44a36976699b862'
-WEBHOOK_URL = 'https://hook.eu1.make.com/r9b84om9ih1vlavqriglefifrayha47f'
-SESSION_STRING = '1ApWapzMBu2AgVzbsy43IaEpdwXq8vPFrI8kHyCyVUHyOX08plS_n6PmqhomM-bN18wNDy1A6Req19-uTHxw-iuEmUUUeBGGeDVb99f3T8vi6Zo38jJ2pSF7PXV3HyLQihfGzW87a7mCe8pKBXBjG85dEPaosNv1UaUBsjYzS41O_MqG5pgAWPFkSYNlFPdUqykFkYUH8ZItAYOiMEqnZZM8ijaUv_mcqu-l1pKVCjA88S9ycd0PYhqDRkhwMAuco79Fb_l7NNGbDvzgdjaywZe6M4tmkXmSfEkoww2f-Dt9F3Ba7wBE9EC36F4EZ0ojdRLpVJB9KXnhn0nq3IdHpU6h01NPX8FY='
+# 1. Данные из переменных окружения
+API_ID = int(os.environ.get("API_ID", 0))
+API_HASH = os.environ.get("API_HASH", "")
+SESSION_STRING = os.environ.get("SESSION_STRING", "")
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL", "")
 
-client = TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH)
+# 2. Инициализация юзербота
+app = Client(
+    "my_userbot",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    session_string=SESSION_STRING
+)
 
-@client.on(events.NewMessage)
-async def handler(event):
-    if event.is_channel or event.is_group:
-        text = event.message.message
-        if text:
-            payload = {
-                'text': text,
-                'chat_id': event.chat_id,
-                'message_id': event.id
-            }
-            async with aiohttp.ClientSession() as session:
-                try:
-                    async with session.post(WEBHOOK_URL, json=payload) as resp:
-                        print(f"Пост отправлен в Make! Статус: {resp.status}")
-                except Exception as e:
-                    print(f"Ошибка: {e}")
+# 3. Фильтр: ловим ВСЕ сообщения из каналов и групп
+@app.on_message(filters.channel | filters.group)
+async def handle_channel_post(client, message):
+    # Берём текст сообщения или подпись к медиафайлу (если это фото/видео)
+    text = message.text or message.caption
+    
+    if not text:
+        return
 
-# Простой веб-сервер, чтобы Render был доволен открытым портом
+    payload = {
+        "text": text,
+        "chat_id": message.chat.id,
+        "message_id": message.id
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(WEBHOOK_URL, json=payload) as resp:
+                print(f"[LOG] Передано на вебхук! Статус: {resp.status}")
+    except Exception as e:
+        print(f"[ERROR] Ошибка отправки на Webhook: {e}")
+
+
+# 4. Простейший веб-сервер, чтобы Render не усыплял бесплатный инстанс
 async def handle_ping(request):
-    return web.Response(text="Bot is running!")
+    return web.Response(text="Your service is live 🚀")
 
 async def start_web_server():
-    app = web.Application()
-    app.router.add_get('/', handle_ping)
-    runner = web.AppRunner(app)
+    server = web.Application()
+    server.router.add_get("/", handle_ping)
+    runner = web.AppRunner(server)
     await runner.setup()
     port = int(os.environ.get("PORT", 10000))
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
+    print(f"[LOG] Web server running on port {port}")
 
 async def main():
     await start_web_server()
-    print("Юзербот успешно запущен!")
-    await client.start()
-    await client.run_until_disconnected()
+    await app.start()
+    print("[LOG] Юзербот запущен и отслеживает каналы!")
+    await asyncio.Event().wait()
 
-if __name__ == '__main__':
-    asyncio.run(main())
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
