@@ -1,5 +1,6 @@
 import os
-import requests
+import json
+import urllib.request
 from pyrogram import Client, filters
 
 API_ID = int(os.environ.get("API_ID"))
@@ -26,8 +27,10 @@ async def handle_new_message(client, message):
     }
 
     try:
-        response = requests.post(WEBHOOK_URL, json=payload, timeout=10)
-        print(f"[LOG] Перехвачено! Чат: {message.chat.id}, Статус Make: {response.status_code}")
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(WEBHOOK_URL, data=data, headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=10) as response:
+            print(f"[LOG] Перехвачено! Чат: {message.chat.id}, Статус Make: {response.getcode()}")
     except Exception as e:
         print(f"[ERROR] Ошибка отправки в Make: {e}")
 
